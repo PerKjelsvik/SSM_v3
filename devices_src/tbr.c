@@ -25,7 +25,7 @@ uint32_t 			cum_temp_counter=0;
 	/*
 	 * private functions
 	 */
- bool array_is_full(void){
+bool array_is_full(void){
 	 if(array_size==ARRAY_MESSAGE_SIZE){
 		 return true;
 	 }
@@ -33,7 +33,7 @@ uint32_t 			cum_temp_counter=0;
 		 return false;
 	 }
  }
- bool array_is_empty(void){
+bool array_is_empty(void){
 	 if(array_size==0){
 		 return true;
 	 }
@@ -41,7 +41,7 @@ uint32_t 			cum_temp_counter=0;
 		 return false;
 	 }
  }
- void array_add(char data){
+void array_add(char data){
 	 if(array_size<ARRAY_MESSAGE_SIZE){
 		 array_msg[array_rear]=data;
 		 array_rear++;
@@ -216,7 +216,7 @@ void clear_buffer(char *buf, uint16_t size){
 	}
 	return;
 }
-char 			resuable_buffer[128];
+char            reusable_buffer[128];
 bool get_and_compare(char *compare_string){
 	char 			*cmd_compare_str;
 	char 			cmd_rx_tx_buf[CMD_RX_TX_BUF_SIZE];
@@ -250,25 +250,34 @@ bool get_and_compare(char *compare_string){
 	return ret_flag;
 }
 
-uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uint8_t offset){
+uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uint8_t offset, uint32_t *first_timestamp){
 	char			*temp_ptr;
 	char			ref_token[2]=",";
 	char			*token;
-	bool			messgae_type=TBR_DETECION_MSG;
+	bool			message_type=TBR_DETECION_MSG;
 	tbr_msesage_t	tbr_message;
 	int				diff_freq=0;
 	uint8_t			detection_freq=0;
 	uint8_t			code_type_unsigned=0;
+  uint8_t     buf_index=0;
+	uint8_t 		protocol=0;
+	bool				diff_flag=true;
 
 		//$000xxx
 	token = strtok(single_msg, ref_token);
 		//timestamp
-	token = strtok(NULL, ref_token);
-	tbr_message.timestamp=(uint32_t)strtoul(token,&temp_ptr,10);
+  token = strtok(NULL, ref_token);
+  if(*first_timestamp > 0){
+    tbr_message.timeDiff=(uint8_t)((uint32_t)strtoul(token,&temp_ptr,10) - *first_timestamp);
+  }else
+  {
+    *first_timestamp=(uint32_t)strtoul(token,&temp_ptr,10);
+		diff_flag=false;
+  }
 		//TBR Sensor or millisec
 	token = strtok(NULL, ref_token);
 	if(strncmp(token,(char *)"TBR Sensor",5)==0){
-		messgae_type=TBR_SENSOR_MSG;
+		message_type=TBR_SENSOR_MSG;
 	}
 	else
 	{
@@ -276,7 +285,7 @@ uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uin
 	}
 		//Codetype or Temperature
 	token = strtok(NULL, ref_token);
-	if(messgae_type==TBR_DETECION_MSG){
+	if(message_type==TBR_DETECION_MSG){
 		if((strncmp(token,(char *)"R256",4)==0) || (strncmp(token,(char *)"r256",4)==0))
 			tbr_message.CodeType=00;
 		else if((strncmp(token,(char *)"R04K",4)==0) || (strncmp(token,(char *)"r04k",4)==0) || (strncmp(token,(char *)"R04k",4)==0))
@@ -295,21 +304,22 @@ uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uin
 			tbr_message.CodeType=07;
 		else
 			tbr_message.CodeType=0xFE;
+		protocol=tbr_message.CodeType;
 	}
 	else{
 		tbr_message.Temperature=(uint16_t)strtoul(token,&temp_ptr,10);
 	}
 		//CodeID or Noise
 	token = strtok(NULL, ref_token);
-	if(messgae_type==TBR_DETECION_MSG){
-		tbr_message.CodeID=(uint16_t)strtoul(token,&temp_ptr,10);
+	if(message_type==TBR_DETECION_MSG){
+		tbr_message.CodeID=(uint32_t)strtoul(token,&temp_ptr,10);
 	}
 	else{
 		tbr_message.Noise=(uint8_t)strtoul(token,&temp_ptr,10);
 	}
 		//CodeData or NoiseLP
 	token = strtok(NULL, ref_token);
-	if(messgae_type==TBR_DETECION_MSG){
+	if(message_type==TBR_DETECION_MSG){
 		tbr_message.CodeData=(uint16_t)strtoul(token,&temp_ptr,10);
 	}
 	else{
@@ -317,7 +327,7 @@ uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uin
 	}
 		//SNR or Frequency
 	token = strtok(NULL, ref_token);
-	if(messgae_type==TBR_DETECION_MSG){
+	if(message_type==TBR_DETECION_MSG){
 		tbr_message.SNR=(uint8_t)strtoul(token,&temp_ptr,10);
 	}
 	else{
@@ -325,7 +335,7 @@ uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uin
 	}
 		//change code type as per frequency
 	token = strtok(NULL, ref_token);
-	if(messgae_type==TBR_DETECION_MSG){
+	if(message_type==TBR_DETECION_MSG){
 		detection_freq=(uint8_t)strtoul(token,&temp_ptr,10);
 		diff_freq=detection_freq-69;
 		if(detection_freq>69){
@@ -341,32 +351,64 @@ uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uin
 		}
 	}
 			//fill the lora buffer
-	dst_buf[offset+0]=(uint8_t)(tbr_message.timestamp>>24);
-	dst_buf[offset+1]=(uint8_t)(tbr_message.timestamp>>16);
-	dst_buf[offset+2]=(uint8_t)(tbr_message.timestamp>>8);
-	dst_buf[offset+3]=(uint8_t)(tbr_message.timestamp>>0);
-	if(messgae_type==TBR_DETECION_MSG){
-		dst_buf[offset+4]=(uint8_t)tbr_message.CodeType;
-		dst_buf[offset+5]=(uint8_t)(tbr_message.CodeID>>8);
-		dst_buf[offset+6]=(uint8_t)(tbr_message.CodeID>>0);
-		dst_buf[offset+7]=(uint8_t)(tbr_message.CodeData>>8);
-		dst_buf[offset+8]=(uint8_t)(tbr_message.CodeData>>0);
+  if(diff_flag){
+    dst_buf[offset+0]=(uint8_t)tbr_message.timeDiff;
+  }else{
+    dst_buf[offset+0]=(uint8_t)(*first_timestamp>>24);
+    dst_buf[offset+1]=(uint8_t)(*first_timestamp>>16);
+    dst_buf[offset+2]=(uint8_t)(*first_timestamp>>8);
+    dst_buf[offset+3]=(uint8_t)(*first_timestamp>>0);
+    buf_index=3;
+  }
+	if(message_type==TBR_DETECION_MSG){
+		dst_buf[offset+buf_index+1]=(uint8_t)tbr_message.CodeType;
+		buf_index+=1;
+		if(protocol == 0){  //R256
+      dst_buf[offset+buf_index+1]=(uint8_t)(tbr_message.CodeID);
+      buf_index+=1;
+    }else if((protocol == 1) || (protocol == 2)){  //R04K || R64K
+      dst_buf[offset+buf_index+1]=(uint8_t)(tbr_message.CodeID>>8);
+      dst_buf[offset+buf_index+2]=(uint8_t)(tbr_message.CodeID>>0);
+      buf_index+=2;
+    }else if(protocol == 3){  //S256
+      dst_buf[offset+buf_index+1]=(uint8_t)tbr_message.CodeID;
+      dst_buf[offset+buf_index+2]=(uint8_t)tbr_message.CodeData;
+      buf_index+=2;
+    }else if(protocol == 4){  //R01M
+      dst_buf[offset+buf_index+1]=(uint8_t)(tbr_message.CodeID>>16);
+      dst_buf[offset+buf_index+2]=(uint8_t)(tbr_message.CodeID>>8);
+      dst_buf[offset+buf_index+3]=(uint8_t)(tbr_message.CodeID>>0);
+      buf_index+=3;
+    }else if(protocol == 5){  //S64K
+      dst_buf[offset+buf_index+1]=(uint8_t)(tbr_message.CodeID>>8);
+      dst_buf[offset+buf_index+2]=(uint8_t)(tbr_message.CodeID>>0);
+      dst_buf[offset+buf_index+3]=(uint8_t)tbr_message.CodeData;
+      buf_index+=3;
+    }else if((protocol == 6) || (protocol == 7)){  //HS256 || DS256
+      dst_buf[offset+buf_index+1]=(uint8_t)tbr_message.CodeID;
+      dst_buf[offset+buf_index+2]=(uint8_t)(tbr_message.CodeData>>8);
+      dst_buf[offset+buf_index+3]=(uint8_t)(tbr_message.CodeData>>0);
+      buf_index+=3;
+    }else {  //should not happen
+      ;  /* Do nothing, packet will be discarded at receiving end */
+    }
 		uint8_t temp_1=((tbr_message.SNR & 0x3F)<<2);
 		uint8_t temp_2=((tbr_message.millisec>>8));
-		dst_buf[offset+9]=temp_1 | temp_2;
-		dst_buf[offset+10]=(uint8_t)(tbr_message.millisec>>0);
+		dst_buf[offset+buf_index+1]=temp_1 | temp_2;
+		dst_buf[offset+buf_index+2]=(uint8_t)(tbr_message.millisec>>0);
+    buf_index+=2;
 		cum_detections_counter++;
 	}else{
-		dst_buf[offset+4]=(uint8_t)0xFF;
-		dst_buf[offset+5]=(uint8_t)(tbr_message.Temperature>>8);
-		dst_buf[offset+6]=(uint8_t)(tbr_message.Temperature>>0);
-		dst_buf[offset+7]=(uint8_t)tbr_message.Noise;
-		dst_buf[offset+8]=(uint8_t)tbr_message.NoiseLP;
-		dst_buf[offset+9]=(uint8_t)0xFF;
-		dst_buf[offset+10]=(uint8_t)tbr_message.frequency;
+		dst_buf[offset+buf_index+1]=(uint8_t)0xFF;
+		dst_buf[offset+buf_index+2]=(uint8_t)(tbr_message.Temperature>>8);
+		dst_buf[offset+buf_index+3]=(uint8_t)(tbr_message.Temperature>>0);
+		dst_buf[offset+buf_index+4]=(uint8_t)tbr_message.Noise;
+		dst_buf[offset+buf_index+5]=(uint8_t)tbr_message.NoiseLP;
+		dst_buf[offset+buf_index+6]=(uint8_t)tbr_message.frequency;
+		buf_index+=6;
 		cum_temp_counter++;
 	}
-	return offset+11;		//fixed offset=message size - 1.....*/
+	return offset+buf_index+1;		//fixed offset=message size - 1.....*/
 }
 uint8_t convert_tbr_msgs_to_uint(char *src_buf, uint8_t *dst_buf, uint8_t msg_count){
 	uint16_t 		inner_loop_var=0;
@@ -375,7 +417,7 @@ uint8_t convert_tbr_msgs_to_uint(char *src_buf, uint8_t *dst_buf, uint8_t msg_co
 	uint16_t		offset_dst_buf=0;
 	char 			single_msg[50];
 	char			*temp_ptr;
-	uint16_t		messages_converted=0;
+  uint32_t first_timestamp=0;
 
 	clear_buffer(single_msg, 50);
 		//extract and convert SN to uint8_t
@@ -388,9 +430,9 @@ uint8_t convert_tbr_msgs_to_uint(char *src_buf, uint8_t *dst_buf, uint8_t msg_co
 	offset_dst_buf=1;
 		//now convert rest of the messages into uint8_t (7 bytes per message => TimeStamp(4)+milli_sec(2)+tagID(1))
 	offset_src_buf=0;
-	if(msg_count>10){
-		//sprintf(resuable_buffer, "\tMessage length =%d. NO LoRA parse\n",msg_count);
-		//debug_str(resuable_buffer);
+	if(msg_count>17){
+		//sprintf(reusable_buffer, "\tMessage length =%d. NO LoRA parse\n",msg_count);
+		//debug_str(reusable_buffer);
 		//return 0;
 		msg_count=10;
 	}
@@ -404,12 +446,11 @@ uint8_t convert_tbr_msgs_to_uint(char *src_buf, uint8_t *dst_buf, uint8_t msg_co
 			single_msg[inner_loop_var]=src_buf[offset_src_buf+inner_loop_var];
 		}
 		if((strstr(single_msg,(const char*)"ack")==NULL) && strlen(single_msg)>30){
-			offset_dst_buf=convert_single_tbr_msg_into_uint(single_msg,dst_buf,offset_dst_buf);
-			messages_converted++;
+			offset_dst_buf=convert_single_tbr_msg_into_uint(single_msg,dst_buf,offset_dst_buf,&first_timestamp);
 		}
 	}
 
-	return messages_converted;
+	return offset_dst_buf;
 }
 	/*
 	 * public functions
@@ -553,9 +594,7 @@ uint8_t tbr_recv_msg_uint(uint8_t *lora_msg_buf, int *lora_length, char *msg_buf
 	*msg_length=loop_var;
 		//LoRa buffer
 	lora_buf_length=convert_tbr_msgs_to_uint(msg_buf,lora_msg_buf,(uint8_t)msg_count);
-	lora_buf_length=((lora_buf_length*11)+1);
 	if(lora_buf_length<=2){lora_buf_length=0;}	//exclude Serial Number byte....
 	*lora_length=lora_buf_length;
 	return msg_count;
 }
-
