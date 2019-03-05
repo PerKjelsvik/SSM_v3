@@ -9,4 +9,7 @@
 *.mk
 *.map
 *.ld
-*.axf
+*.axf*.project
+GNU ARM V7.2.1 - Debug/
+GNU ARM V4.9.3 - Debug/
+emlib/
