@@ -436,7 +436,10 @@ uint8_t convert_tbr_msgs_to_uint(char *src_buf, uint8_t *dst_buf, uint8_t msg_co
 	}
 	dst_buf[0]=(uint8_t)strtoul(single_msg,&temp_ptr,10);
 	dst_buf[0]=0x80;
-	offset_dst_buf=1;
+	offset_dst_buf=2;  // header packet 00b
+	if ((dst_buf[1] & 0x03) & 0x01){
+		offset_dst_buf=12;  // if header packet 01b (GPS)
+	}
 		//now convert rest of the messages into uint8_t (7 bytes per message => TimeStamp(4)+milli_sec(2)+tagID(1))
 	offset_src_buf=0;
 	if(msg_count>17){

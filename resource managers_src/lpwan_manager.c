@@ -16,6 +16,8 @@
 	static bool				last_tx_complete=true;
 	static uint8_t			gps_state=0;
 	static uint8_t 			node_id=0;
+	static uint16_t			tbr_id=0;  // 14-bit number
+	static uint16_t battery_info=0;  // 14-bit number
 
 #ifdef USE_RADIO
 	nav_data_t	 			running_tstamp;
@@ -97,6 +99,8 @@
 
 	static void app_funct (osjob_t* j) {
 		time_manager_cmd_t		time_manager_cmd=basic_sync;
+		uint32_t	prev_gps_tstamp=0;
+		uint16_t 	gps_intvl=900;  //15 minutes
 
 				//add 10secs
 		ref_tstamp.gps_timestamp+=BASIC_SYNCH_SECONDS;
@@ -121,8 +125,27 @@
 			sprintf(temp_buf,"LoRA_join_flag=%d\tTime Diff:Ref=%ld\tCur=%ld\tdiff=%d\tmin=%d\tsec=%d\tnano=%ld\ttAcc=%ld\tGPS_fix=%2x\tgps_state=%d\n",joined_lora,(time_t)ref_tstamp.gps_timestamp,(time_t)running_tstamp.gps_timestamp,diff_in_tstamp,running_tstamp.min,running_tstamp.sec,running_tstamp.nano,running_tstamp.tAcc,running_tstamp.fix,gps_state);
 			debug_str(temp_buf);
 			if(time_manager_cmd==advance_sync && joined_lora==true && last_tx_complete==true){
+				lora_buffer[0]=(uint8_t)(tbr_id>>6);
+				lora_buffer[1]=(uint8_t)((tbr_id<<2) & 0xFC);  // Header 00b
+				if(running_tstamp.gps_timestamp-prev_gps_tstamp > gps_intvl){
+					prev_gps_tstamp=running_tstamp.gps_timestamp;
+					if(running_tstamp.pDOP>127){running_tstamp.pDOP=127;}  // enforce 7-bit number
+					if(running_tstamp.numSV>31){running_tstamp.numSV=31;}  // enforce 5-bit number
+
+					// fill lora buffer with gps header message
+					lora_buffer[1]=(uint8_t)(((tbr_id<<2) & 0xFC) + 1);  // Header 01b (overwrite header 00b)
+					lora_buffer[2]=(uint8_t)(battery_info>>6);
+					lora_buffer[3]=(uint8_t)(((battery_info<<2) & 0xFC) | (running_tstamp.longitude>>24));
+					lora_buffer[4]=(uint8_t)(running_tstamp.longitude>>16);
+					lora_buffer[5]=(uint8_t)(running_tstamp.longitude>>8);
+					lora_buffer[6]=(uint8_t)(running_tstamp.longitude>>0);
+					lora_buffer[7]=(uint8_t)(running_tstamp.latitude>>24);
+					lora_buffer[8]=(uint8_t)(running_tstamp.latitude>>16);
+					lora_buffer[9]=(uint8_t)(running_tstamp.latitude>>8);
+					lora_buffer[10]=(uint8_t)(((running_tstamp.latitude & 0x01)<<7) | (running_tstamp.pDOp));
+					lora_buffer[11]=(uint8_t)(((running_tstamp.fix)<<5) | (running_tstamp.numSV));  // NB! fix should be 3-bits (does not support fix=8)
+				}
 				lora_msg_length=app_manager_get_lora_buffer(lora_buffer);
-				lora_buffer[0]=node_id;
 				if(lora_msg_length>0){
 					lora_tx_function();
 					GPIO_PinOutSet(LED_GPS_RADIO_PORT, LED_RADIO);
