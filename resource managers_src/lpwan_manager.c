@@ -142,7 +142,7 @@
 					lora_buffer[7]=(uint8_t)(running_tstamp.latitude>>24);
 					lora_buffer[8]=(uint8_t)(running_tstamp.latitude>>16);
 					lora_buffer[9]=(uint8_t)(running_tstamp.latitude>>8);
-					lora_buffer[10]=(uint8_t)(((running_tstamp.latitude & 0x01)<<7) | (running_tstamp.pDOp));
+					lora_buffer[10]=(uint8_t)(((running_tstamp.latitude & 0x01)<<7) | (running_tstamp.pDOP));
 					lora_buffer[11]=(uint8_t)(((running_tstamp.fix)<<5) | (running_tstamp.numSV));  // NB! fix should be 3-bits (does not support fix=8)
 				}
 				lora_msg_length=app_manager_get_lora_buffer(lora_buffer);
@@ -157,7 +157,7 @@
 	return;
 	}
 			/*
-			 * public funtions
+			 * public functions
 			 */
 
 	void lpwan_init(void){

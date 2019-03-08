@@ -18,7 +18,7 @@ static 	int			array_rear=0;
 static 	bool		incomplete_ack_flag=false;
 static 	uint8_t		tbr_backoff_delay=4;
 	/*
-	 * shared global varibales
+	 * shared global variables
 	 */
 uint32_t 			cum_detections_counter=0;
 uint32_t 			cum_temp_counter=0;
@@ -259,8 +259,8 @@ uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uin
 	int				diff_freq=0;
 	uint8_t			detection_freq=0;
 	uint8_t			code_type_unsigned=0;
-	uint8_t     	buf_index=0;
-	uint8_t 		protocol=0;
+	uint8_t			buf_index=0;
+	uint8_t			protocol=0;
 	bool			diff_flag=true;
 
 
@@ -420,13 +420,13 @@ uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uin
 	return offset+buf_index+1;		//fixed offset=message size - 1.....*/
 }
 uint8_t convert_tbr_msgs_to_uint(char *src_buf, uint8_t *dst_buf, uint8_t msg_count){
-	uint16_t 		inner_loop_var=0;
+	uint16_t		inner_loop_var=0;
 	uint16_t		outer_loop_var=0;
 	uint16_t		offset_src_buf=0;
 	uint16_t		offset_dst_buf=0;
-	char 			single_msg[50];
+	char			single_msg[50];
 	char			*temp_ptr;
-	uint32_t 		first_timestamp=0;
+	uint32_t		first_timestamp=0;
 
 	clear_buffer(single_msg, 50);
 		//extract and convert SN to uint8_t
