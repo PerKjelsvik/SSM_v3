@@ -129,7 +129,6 @@
 				lora_buffer[0]=(uint8_t)(tbr_id>>6);
 				lora_buffer[1]=(uint8_t)((tbr_id<<2) & 0xFC);  // Header 00b
 				if((running_tstamp.gps_timestamp-prev_gps_tstamp) > gps_intvl){
-					debug_str((const u1_t*)"\tNew GPS header\n");
 					prev_gps_tstamp=running_tstamp.gps_timestamp;
 					if(running_tstamp.pDOP>127){running_tstamp.pDOP=127;}  // enforce 7-bit number
 					if(running_tstamp.numSV>31){running_tstamp.numSV=31;}  // enforce 5-bit number
@@ -149,7 +148,6 @@
 				}
 				lora_msg_length=app_manager_get_lora_buffer(lora_buffer);
 				if(lora_msg_length>0){
-					debug_str((const u1_t*)"\tSending LoRa message\n");
 					lora_tx_function();
 					GPIO_PinOutSet(LED_GPS_RADIO_PORT, LED_RADIO);
 					last_tx_complete=false;
