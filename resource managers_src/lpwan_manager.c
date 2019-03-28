@@ -16,8 +16,8 @@
 	static bool				last_tx_complete=true;
 	static uint8_t			gps_state=0;
 	static uint8_t 			node_id=0;
-	static uint16_t			tbr_id=0;  // 14-bit number
-	static uint16_t battery_info=0;  // 14-bit number
+	static uint16_t			tbr_id=320;  // 14-bit number
+	static uint16_t 		battery_info=180;  // 14-bit number
 
 #ifdef USE_RADIO
 	nav_data_t	 			running_tstamp;
@@ -100,7 +100,8 @@
 	static void app_funct (osjob_t* j) {
 		time_manager_cmd_t		time_manager_cmd=basic_sync;
 		uint32_t	prev_gps_tstamp=0;
-		uint16_t 	gps_intvl=900;  //15 minutes
+		// uint16_t 	gps_intvl=900;  //15 minutes
+		uint16_t	gps_intvl=60;	// 1 minute
 
 				//add 10secs
 		ref_tstamp.gps_timestamp+=BASIC_SYNCH_SECONDS;
@@ -127,7 +128,8 @@
 			if(time_manager_cmd==advance_sync && joined_lora==true && last_tx_complete==true){
 				lora_buffer[0]=(uint8_t)(tbr_id>>6);
 				lora_buffer[1]=(uint8_t)((tbr_id<<2) & 0xFC);  // Header 00b
-				if(running_tstamp.gps_timestamp-prev_gps_tstamp > gps_intvl){
+				if((running_tstamp.gps_timestamp-prev_gps_tstamp) > gps_intvl){
+					debug_str((const u1_t*)"\tNew GPS header\n");
 					prev_gps_tstamp=running_tstamp.gps_timestamp;
 					if(running_tstamp.pDOP>127){running_tstamp.pDOP=127;}  // enforce 7-bit number
 					if(running_tstamp.numSV>31){running_tstamp.numSV=31;}  // enforce 5-bit number
@@ -147,6 +149,7 @@
 				}
 				lora_msg_length=app_manager_get_lora_buffer(lora_buffer);
 				if(lora_msg_length>0){
+					debug_str((const u1_t*)"\tSending LoRa message\n");
 					lora_tx_function();
 					GPIO_PinOutSet(LED_GPS_RADIO_PORT, LED_RADIO);
 					last_tx_complete=false;
@@ -194,8 +197,8 @@
 				  }
 			  }
 			  else {
-				  //if(ref_tstamp.fix==0x03 && ref_tstamp.gps_timestamp%10==0 && ref_tstamp.tAcc<=1000){
-				  if(ref_tstamp.fix==0x03 && ref_tstamp.gps_timestamp%10==0){
+				  if(ref_tstamp.fix==0x03 && ref_tstamp.gps_timestamp%10==0 && ref_tstamp.tAcc<=t_acc_limit){
+				  //if(ref_tstamp.fix==0x03 && ref_tstamp.gps_timestamp%10==0){
 					  break;
 				  }
 				  else {

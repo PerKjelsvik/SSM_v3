@@ -446,7 +446,7 @@ uint8_t convert_tbr_msgs_to_uint(char *src_buf, uint8_t *dst_buf, uint8_t msg_co
 		//sprintf(reusable_buffer, "\tMessage length =%d. NO LoRA parse\n",msg_count);
 		//debug_str(reusable_buffer);
 		//return 0;
-		msg_count=10;
+		msg_count=17;
 	}
 	for(outer_loop_var=0;outer_loop_var<msg_count;outer_loop_var++){
 		clear_buffer(single_msg, 50);
