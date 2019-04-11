@@ -145,16 +145,25 @@
 
 					lora_msg_length=app_manager_get_lora_buffer(lora_buffer);
 
-					lora_buffer[2]=(uint8_t)(battery_info>>6);
-					lora_buffer[3]=(uint8_t)((battery_info<<2) | ((long_gps>>24) & 0x03));
-					lora_buffer[4]=(uint8_t)(long_gps>>16);
-					lora_buffer[5]=(uint8_t)(long_gps>>8);
-					lora_buffer[6]=(uint8_t)(long_gps>>0);
-					lora_buffer[7]=(uint8_t)(lat_gps>>24);
-					lora_buffer[8]=(uint8_t)(lat_gps>>16);
-					lora_buffer[9]=(uint8_t)(lat_gps>>8);
-					lora_buffer[10]=(uint8_t)(((lat_gps & 0x01)<<7) | (running_tstamp.pDOP));
-					lora_buffer[11]=(uint8_t)(((running_tstamp.fix)<<5) | (running_tstamp.numSV));  // NB! fix should be 3-bits (does not support fix=8)
+					// If there are no tbr messsages, send gps only message with gps timestamp
+					if (lora_msg_length == 0){
+						lora_buffer[2] = (uint8_t)(running_tstamp.gps_timestamp>>24);
+						lora_buffer[3] = (uint8_t)(running_tstamp.gps_timestamp>>16);
+						lora_buffer[4] = (uint8_t)(running_tstamp.gps_timestamp>>8);
+						lora_buffer[5] = (uint8_t)(running_tstamp.gps_timestamp>>0);
+						lora_msg_length = 16
+					}
+
+					lora_buffer[6]=(uint8_t)(battery_info>>6);
+					lora_buffer[7]=(uint8_t)((battery_info<<2) | ((long_gps>>24) & 0x03));
+					lora_buffer[8]=(uint8_t)(long_gps>>16);
+					lora_buffer[9]=(uint8_t)(long_gps>>8);
+					lora_buffer[10]=(uint8_t)(long_gps>>0);
+					lora_buffer[11]=(uint8_t)(lat_gps>>24);
+					lora_buffer[12]=(uint8_t)(lat_gps>>16);
+					lora_buffer[13]=(uint8_t)(lat_gps>>8);
+					lora_buffer[14]=(uint8_t)(((lat_gps & 0x01)<<7) | (running_tstamp.pDOP));
+					lora_buffer[15]=(uint8_t)(((running_tstamp.fix)<<5) | (running_tstamp.numSV));  // NB! fix should be 3-bits (does not support fix=8)
 				}
 				if(lora_msg_length>0){
 					lora_tx_function();

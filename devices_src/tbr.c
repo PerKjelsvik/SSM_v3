@@ -363,11 +363,12 @@ uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uin
 	if(diff_flag){
 		dst_buf[offset+0]=(uint8_t)tbr_message.timeDiff;
 	}else{
-		dst_buf[offset+1]=(uint8_t)(*first_timestamp>>16);
 		dst_buf[offset+0]=(uint8_t)(*first_timestamp>>24);
+		dst_buf[offset+1]=(uint8_t)(*first_timestamp>>16);
 		dst_buf[offset+2]=(uint8_t)(*first_timestamp>>8);
 		dst_buf[offset+3]=(uint8_t)(*first_timestamp>>0);
-		buf_index=3;
+		dst_buf[offset+4]=0x00;
+		buf_index=4;
 	}
 	if(message_type==TBR_DETECION_MSG){
 		dst_buf[offset+buf_index+1]=(uint8_t)tbr_message.CodeType;
@@ -436,7 +437,7 @@ uint8_t convert_tbr_msgs_to_uint(char *src_buf, uint8_t *dst_buf, uint8_t msg_co
 	}
 	dst_buf[0]=(uint8_t)strtoul(single_msg,&temp_ptr,10);
 	dst_buf[0]=0x80;
-	offset_dst_buf=2;  // header
+	offset_dst_buf=0x02;  // header
 		//now convert rest of the messages into uint8_t (7 bytes per message => TimeStamp(4)+milli_sec(2)+tagID(1))
 	offset_src_buf=0;
 	if(msg_count>17){

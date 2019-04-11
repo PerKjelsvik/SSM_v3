@@ -334,7 +334,14 @@ uint8_t	app_manager_get_lora_buffer(uint8_t	*lora_buffer){
 	uint8_t			offset=0;
 
 	if(tbr_lora_length>0){
-		if ((lora_buffer[1] & 0x03) == 0x01){offset=12-2;}
+		// If gps, add ref_timestamp, add rest of tbr with offset (space for gps)
+		if ((lora_buffer[1] & 0x03) == 0x01){
+			lora_buffer[2] = tbr_lora_buf[2];
+			lora_buffer[3] = tbr_lora_buf[3];
+			lora_buffer[4] = tbr_lora_buf[4];
+			lora_buffer[5] = tbr_lora_buf[5];
+			offset=16-2-4;
+		}
 		for(loop_var=0;loop_var<tbr_lora_length;loop_var++){
 			lora_buffer[loop_var+offset]=tbr_lora_buf[loop_var];
 			//sprintf((char *)rs232_tx_buf,"lora_buffer[loop_var+offset (%d+%d)]=%1d\n", loop_var, offset, lora_buffer[loop_var+offset]);
