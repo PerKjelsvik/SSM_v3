@@ -270,7 +270,9 @@ uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uin
 	token = strtok(NULL, ref_token);
 	if(*first_timestamp > 0){
 		/* NB! Does not handle potential rare case of overflow: (-1 = 255) */
-		tbr_message.timeDiff=(uint8_t)((uint32_t)strtoul(token,&temp_ptr,10) - *first_timestamp);
+		uint8_t timeDiff = strtoul(token,&temp_ptr,10) - *first_timestamp;
+		// if(timeDiff==255){timeDiff=0;}  // handles overflow
+		tbr_message.timeDiff=(timeDiff);
 	}else
 	{
 		*first_timestamp=(uint32_t)strtoul(token,&temp_ptr,10);

@@ -128,22 +128,32 @@
 			debug_str(temp_buf);
 			if(time_manager_cmd==advance_sync && joined_lora==true && last_tx_complete==true){
 				if ((running_tstamp.gps_timestamp - prev_gps_tstamp) < gps_intvl){
+					// Clear header flag before getting buffer
+					lora_buffer[1]=0;
 					lora_msg_length=app_manager_get_lora_buffer(lora_buffer);
-
 					lora_buffer[0]=(uint8_t)(tbr_id>>6);
 					lora_buffer[1]=(uint8_t)(tbr_id<<2);  // Header 00b and TBR Serial ID
-			} else {
+				} else {
 					prev_gps_tstamp = running_tstamp.gps_timestamp;
+
+					// latitude, longitude and PDOP needs to be scaled
+					uint32_t long_gps = running_tstamp.longitude / 100;  // Remove 2 decimal digits
+					uint32_t lat_gps = running_tstamp.latitude / 100; 	 // Remove 2 decimal digits
+					uint16_t pDOP = running_tstamp.pDOP / 10;  			 // Remove 1 decimal digit
+
+					// Round decimal 1 up if difference equal or larger than 5
+					if((uint8_t)((running_tstamp.longitude - long_gps*100) >= 5)){long_gps = long_gps + 1;}
+					if((uint8_t)((running_tstamp.latitude - lat_gps*100) >= 5)){lat_gps = lat_gps + 1;}
+					if((uint8_t)((running_tstamp.pDOP - pDOP*10) >= 5)){pDOP = pDOP + 1;}
+
 					if(running_tstamp.pDOP>127){running_tstamp.pDOP=127;}  // enforce 7-bit number
 					if(running_tstamp.numSV>31){running_tstamp.numSV=31;}  // enforce 5-bit number
 
-					// fill lora buffer with gps header message
-					uint32_t long_gps = running_tstamp.longitude / 100;  // Remove 2 decimal digits
-					uint32_t lat_gps = running_tstamp.latitude / 100; 	 // Remove 2 decimal digits
+					// Clear header flag before getting buffer
+					lora_buffer[1]=1;
+					lora_msg_length=app_manager_get_lora_buffer(lora_buffer);
 					lora_buffer[0]=(uint8_t)(tbr_id>>6);
 					lora_buffer[1]=(uint8_t)((tbr_id<<2) | 0x01);  // Header 01b flag
-
-					lora_msg_length=app_manager_get_lora_buffer(lora_buffer);
 
 					// If there are no tbr messsages, send gps only message with gps timestamp
 					if (lora_msg_length == 0){
@@ -151,9 +161,10 @@
 						lora_buffer[3] = (uint8_t)(running_tstamp.gps_timestamp>>16);
 						lora_buffer[4] = (uint8_t)(running_tstamp.gps_timestamp>>8);
 						lora_buffer[5] = (uint8_t)(running_tstamp.gps_timestamp>>0);
-						lora_msg_length = 16
+						lora_msg_length = 16; // header (6 bytes) + gps data (10 bytes)
 					}
 
+					// Fill gps data into buffer
 					lora_buffer[6]=(uint8_t)(battery_info>>6);
 					lora_buffer[7]=(uint8_t)((battery_info<<2) | ((long_gps>>24) & 0x03));
 					lora_buffer[8]=(uint8_t)(long_gps>>16);
@@ -162,8 +173,8 @@
 					lora_buffer[11]=(uint8_t)(lat_gps>>24);
 					lora_buffer[12]=(uint8_t)(lat_gps>>16);
 					lora_buffer[13]=(uint8_t)(lat_gps>>8);
-					lora_buffer[14]=(uint8_t)(((lat_gps & 0x01)<<7) | (running_tstamp.pDOP));
-					lora_buffer[15]=(uint8_t)(((running_tstamp.fix)<<5) | (running_tstamp.numSV));  // NB! fix should be 3-bits (does not support fix=8)
+					lora_buffer[14]=(uint8_t)(((lat_gps & 0x01)<<7) | (pDOP));
+					lora_buffer[15]=(uint8_t)(((running_tstamp.fix)<<5) | (running_tstamp.numSV));
 				}
 				if(lora_msg_length>0){
 					lora_tx_function();

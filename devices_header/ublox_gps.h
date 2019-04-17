@@ -39,7 +39,7 @@ typedef struct {
 	uint32_t	longitude;
 	uint32_t	latitude;
 	uint32_t	height;
-	uint8_t		fix;		//added later later later on
+	uint16_t	fix;		//added later later later on
 
 }nav_data_t;
 /*

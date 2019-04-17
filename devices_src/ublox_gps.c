@@ -219,6 +219,7 @@ nav_data_t		parse_message(uint8_t data[]){
 	uint32_t		latitude=0;
 	uint32_t		height=0;
 	uint8_t			offset=6;
+	uint16_t		pdop=0;
 
 		//extract GPS TimeStamp
 	gps_timestamp|=(data[offset+3]<<24);
@@ -251,7 +252,9 @@ nav_data_t		parse_message(uint8_t data[]){
 	nav_data.nano=(uint32_t)(nano);			//added later on
 	nav_data.fix=data[offset+20];			//added later later later on
 	nav_data.numSV=data[offset+23];			//added later on
-	nav_data.pDOP=data[offset+76];			//added later later on
+	pdop|=(data[offset+77]<<8);
+	pdop|=data[offset+76];
+	nav_data.pDOP=(uint16_t)(pdop);			//added later later on
 		//extract longitude
 	longitude=0;
 	longitude|=(data[offset+27]<<24);
