@@ -42,6 +42,7 @@ void 			append_gps_status(char *tbr_msg_buf, int tbr_msg_count, nav_data_t nav_d
 void 			app_manager_tbr_synch_msg(uint8_t time_manager_cmd, nav_data_t ref_timestamp,nav_data_t running_timestamp, int diff);
 bool 			app_manager_init(void);
 uint8_t			app_manager_get_lora_buffer(uint8_t	*lora_buffer);
+uint16_t		app_manager_get_tbr_serial_id(void);
 nav_data_t 		app_manager_get_nav_data(void);
 bool 			debug_file_sys_setup(char *debug_name, char buf[]);
 

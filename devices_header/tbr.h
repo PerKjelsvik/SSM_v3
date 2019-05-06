@@ -19,19 +19,21 @@
 
 typedef struct {
 		//First delimiter
-	uint8_t		timeDiff;
+	uint16_t	tbrID;
 		//Second delimiter
-	uint16_t	millisec;
+	uint8_t		timeDiff;
 		//3rd delimiter
+	uint16_t	millisec;
+		//4th delimiter
 	uint8_t		CodeType;
 	uint16_t	Temperature;
-		//4th delimiter
+		//5th delimiter
 	uint32_t	CodeID;
 	uint8_t		Noise;
-		//5th delimiter
+		//6th delimiter
 	uint16_t	CodeData;
 	uint8_t		NoiseLP;
-		//6th delimiter
+		//7th delimiter
 	uint8_t		frequency;
 	uint8_t		SNR;
 }tbr_msesage_t;

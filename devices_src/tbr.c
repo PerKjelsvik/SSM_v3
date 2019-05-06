@@ -269,8 +269,8 @@ uint8_t convert_single_tbr_msg_into_uint(char *single_msg, uint8_t *dst_buf, uin
 		//timestamp
 	token = strtok(NULL, ref_token);
 	if(*first_timestamp > 0){
-		/* NB! Does not handle potential rare case of overflow: (-1 = 255) */
-		uint8_t timeDiff = strtoul(token,&temp_ptr,10) - *first_timestamp;
+		/* NB! Does not handle *potential* rare case of overflow: (-1 = 255) */
+		uint8_t timeDiff = (uint8_t)((uint32_t)strtoul(token,&temp_ptr,10) - *first_timestamp);
 		// if(timeDiff==255){timeDiff=0;}  // handles overflow
 		tbr_message.timeDiff=(timeDiff);
 	}else
@@ -430,15 +430,17 @@ uint8_t convert_tbr_msgs_to_uint(char *src_buf, uint8_t *dst_buf, uint8_t msg_co
 	char			single_msg[50];
 	char			*temp_ptr;
 	uint32_t		first_timestamp=0;
+	uint16_t		tbr_serial_id = 0;
 
 	clear_buffer(single_msg, 50);
-		//extract and convert SN to uint8_t
+		//extract and convert SN to uint16_t
 	for(outer_loop_var=0;outer_loop_var<10;outer_loop_var++){
 		if(src_buf[outer_loop_var+1]==','){break;}
 		single_msg[outer_loop_var]=src_buf[outer_loop_var+1];	//+1 to ignore $
 	}
-	dst_buf[0]=(uint8_t)strtoul(single_msg,&temp_ptr,10);
-	dst_buf[0]=0x80;
+	tbr_serial_id = (uint16_t)strtoul(single_msg,&temp_ptr,10);
+	dst_buf[0]=(uint8_t)(tbr_serial_id>>8);
+	dst_buf[1]=(uint8_t)(tbr_serial_id>>0);
 	offset_dst_buf=0x02;  // header
 		//now convert rest of the messages into uint8_t (7 bytes per message => TimeStamp(4)+milli_sec(2)+tagID(1))
 	offset_src_buf=0;

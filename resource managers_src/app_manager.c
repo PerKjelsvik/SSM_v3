@@ -328,6 +328,15 @@ void app_manager_tbr_synch_msg(uint8_t  time_manager_cmd, nav_data_t ref_timesta
 nav_data_t app_manager_get_nav_data(void){
 	return gps_get_nav_data();
 }
+
+uint16_t app_manager_get_tbr_serial_id(void){
+	uint16_t tbr_serial_id=0;
+	if(tbr_lora_length>0){
+		tbr_serial_id = (uint16_t)((tbr_lora_buf[0]<<8) | (tbr_lora_buf[1]<<0));
+	}
+	return tbr_serial_id;
+}
+
 uint8_t	app_manager_get_lora_buffer(uint8_t	*lora_buffer){
 	int				loop_var=0;
 	uint8_t			lora_buf_length=0;
@@ -344,8 +353,6 @@ uint8_t	app_manager_get_lora_buffer(uint8_t	*lora_buffer){
 		}
 		for(loop_var=0;loop_var<tbr_lora_length;loop_var++){
 			lora_buffer[loop_var+offset]=tbr_lora_buf[loop_var];
-			//sprintf((char *)rs232_tx_buf,"lora_buffer[loop_var+offset (%d+%d)]=%1d\n", loop_var, offset, lora_buffer[loop_var+offset]);
-			//debug_str(rs232_tx_buf);
 		}
 		lora_buf_length=(uint8_t)(tbr_lora_length + offset);
 		tbr_lora_length=0;

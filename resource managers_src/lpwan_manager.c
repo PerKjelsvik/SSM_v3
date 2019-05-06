@@ -16,9 +16,8 @@
 	static bool				last_tx_complete=true;
 	static uint8_t			gps_state=0;
 	static uint8_t 			node_id=0;
-	static uint16_t			tbr_id=320;  // 14-bit number
-	static uint16_t 		battery_info=180;  // 14-bit number
-
+	static uint16_t 		battery_info=180;  // 14-bit number, this should be implemented in the future
+	static uint16_t 		tbr_serial_id=0;
 #ifdef USE_RADIO
 	nav_data_t	 			running_tstamp;
 	nav_data_t	 			ref_tstamp;
@@ -99,9 +98,8 @@
 
 	static void app_funct (osjob_t* j) {
 		time_manager_cmd_t		time_manager_cmd=basic_sync;
-		// uint16_t 	gps_intvl=900;  //15 minutes
-		uint8_t	gps_intvl=180;	// 3 minutes
 		static uint32_t prev_gps_tstamp = 0;
+		static uint16_t gps_send_intvl = 60*10;  // 60 * number of minutes. Every time it's more, gps packet is sent with header.
 
 
 				//add 10secs
@@ -127,12 +125,16 @@
 			sprintf(temp_buf,"LoRA_join_flag=%d\tTime Diff:Ref=%ld\tCur=%ld\tdiff=%d\tmin=%d\tsec=%d\tnano=%ld\ttAcc=%ld\tGPS_fix=%2x\tgps_state=%d\n",joined_lora,(time_t)ref_tstamp.gps_timestamp,(time_t)running_tstamp.gps_timestamp,diff_in_tstamp,running_tstamp.min,running_tstamp.sec,running_tstamp.nano,running_tstamp.tAcc,running_tstamp.fix,gps_state);
 			debug_str(temp_buf);
 			if(time_manager_cmd==advance_sync && joined_lora==true && last_tx_complete==true){
-				if ((running_tstamp.gps_timestamp - prev_gps_tstamp) < gps_intvl){
+				// if tbr_serial_id hasn't been set yet, set tbr_serial_id
+				if(tbr_serial_id == 0){
+					tbr_serial_id = app_manager_get_tbr_serial_id();
+				}
+				if ((running_tstamp.gps_timestamp - prev_gps_tstamp) < gps_send_intvl){
 					// Clear header flag before getting buffer
 					lora_buffer[1]=0;
 					lora_msg_length=app_manager_get_lora_buffer(lora_buffer);
-					lora_buffer[0]=(uint8_t)(tbr_id>>6);
-					lora_buffer[1]=(uint8_t)(tbr_id<<2);  // Header 00b and TBR Serial ID
+					lora_buffer[0]=(uint8_t)(tbr_serial_id>>6);
+					lora_buffer[1]=(uint8_t)(tbr_serial_id<<2);  // Header 00b and TBR Serial ID
 				} else {
 					prev_gps_tstamp = running_tstamp.gps_timestamp;
 
@@ -146,14 +148,16 @@
 					if((uint8_t)((running_tstamp.latitude - lat_gps*100) >= 5)){lat_gps = lat_gps + 1;}
 					if((uint8_t)((running_tstamp.pDOP - pDOP*10) >= 5)){pDOP = pDOP + 1;}
 
-					if(running_tstamp.pDOP>127){running_tstamp.pDOP=127;}  // enforce 7-bit number
-					if(running_tstamp.numSV>31){running_tstamp.numSV=31;}  // enforce 5-bit number
+					// number of satellites enforced as 5-bit number, and pDOP enforced as 7-bit number
+					uint8_t numSV = running_tstamp.numSV;
+					if(numSV>31){numSV=31;}  // enforce 5-bit number
+					if(pDOP>127){pDOP=127;}  // enforce 7-bit number
 
 					// Clear header flag before getting buffer
 					lora_buffer[1]=1;
 					lora_msg_length=app_manager_get_lora_buffer(lora_buffer);
-					lora_buffer[0]=(uint8_t)(tbr_id>>6);
-					lora_buffer[1]=(uint8_t)((tbr_id<<2) | 0x01);  // Header 01b flag
+					lora_buffer[0]=(uint8_t)(tbr_serial_id>>6);
+					lora_buffer[1]=(uint8_t)((tbr_serial_id<<2) | 0x01);  // Header 01b flag and TBR serial id
 
 					// If there are no tbr messsages, send gps only message with gps timestamp
 					if (lora_msg_length == 0){
@@ -170,11 +174,11 @@
 					lora_buffer[8]=(uint8_t)(long_gps>>16);
 					lora_buffer[9]=(uint8_t)(long_gps>>8);
 					lora_buffer[10]=(uint8_t)(long_gps>>0);
-					lora_buffer[11]=(uint8_t)(lat_gps>>24);
+					lora_buffer[11]=(uint8_t)((pDOP<<1) | ((lat_gps>>24) & 0x01));
 					lora_buffer[12]=(uint8_t)(lat_gps>>16);
 					lora_buffer[13]=(uint8_t)(lat_gps>>8);
-					lora_buffer[14]=(uint8_t)(((lat_gps & 0x01)<<7) | (pDOP));
-					lora_buffer[15]=(uint8_t)(((running_tstamp.fix)<<5) | (running_tstamp.numSV));
+					lora_buffer[14]=(uint8_t)(lat_gps>>0);
+					lora_buffer[15]=(uint8_t)((running_tstamp.fix<<5) | (numSV));
 				}
 				if(lora_msg_length>0){
 					lora_tx_function();
