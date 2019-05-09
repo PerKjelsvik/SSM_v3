@@ -206,11 +206,6 @@
 			//Timing accuracy issue
 		uint32_t t_acc_limit=1000;
 		node_id=read_switch() & 0x3f;
-		if(node_id>=32){
-			t_acc_limit=1000;
-		}else{
-			t_acc_limit=2000000000;  //nsec which is default...
-		}
 		sprintf(temp_buf,"Node ID=%2x\nInit. successful\nResolving GPS timestamp",node_id);
 		display_put_string(3,3,temp_buf,font_medium);
 		gps_poll_nav_status();
